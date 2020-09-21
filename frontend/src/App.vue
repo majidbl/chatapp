@@ -95,7 +95,7 @@ export default {
       connection: null,
       msg: "",
       smsgs: [],
-      contacts: ["Ali", "Mohammad", "Nima", "Zahra", "Shasti", "Behnam"],
+      contacts: [],
       menuVisible: false,
       sender: "",
       reciever: "",
@@ -159,28 +159,35 @@ export default {
       .then(response => console.log(response))
       .catch(e => {
       console.log("err here ocurred:  ",e);
-        
       })
-      
-    }
+      }
+      var url = 'http://localhost:8888/getcontact/'+ this.username
+      //var url = 'http://localhost:8888/getcontact/majid'
+      //console.log(url)
+      axios
+      .get(url)
+      .then(response => this.contacts=response.data.Contact.split(","). filter(el =>{
+        return el != '';
+      }))
+      .catch(error => console.log(error))
+          
       
     },
     addContact(){
-      if(this.newcontact != "" || this.newcontact != " "){
+      if(this.newcontact != "" & this.newcontact != " "){
       axios.post('http://localhost:8888/addcontact', { 
         username:this.username,
-        newcontact: this.newcontact
+        contact: this.newcontact
       })
       .then(response => console.log(response))
       .catch(e => {
       console.log("err here ocurred:  ",e);
         
       })
-          
-      }
-      
     this.contacts.push(this.newcontact)
     this.newcontact = ""
+      }
+      
     }
     
   },

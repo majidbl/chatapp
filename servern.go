@@ -8,7 +8,7 @@ import (
   "encoding/json"
   "github.com/gorilla/mux"
   "github.com/gorilla/handlers"
-  //"fmt"
+  "reflect"
   "github.com/majidzarephysics/chatapp/model"
   "github.com/gorilla/websocket"
   )
@@ -45,7 +45,7 @@ func echo(w http.ResponseWriter, r *http.Request) {
         }
         senderTemp := msg.Sender
         
-        msg.Content = senderTemp + "says -> " + msg.Content
+        //msg.Content = senderTemp + "says -> " + msg.Content
         if msg.Reciver == "server"{
           clients[senderTemp] = c
         }else{
@@ -57,6 +57,10 @@ func echo(w http.ResponseWriter, r *http.Request) {
 func handlemsg(){
   for{
     m := <- msgs
+    errm := model.SaveMsgDB(m)
+    if errm != nil{
+      fmt.Println(errm)
+    }
     if _, ok := clients[m.Reciver]; ok{
       err := clients[m.Reciver].WriteJSON(m)
       if err != nil{
@@ -96,30 +100,51 @@ func hello(w http.ResponseWriter, r *http.Request){
         return
       }
       var users []model.Users
-      db.Where("user_name = ?", userj.UserName).First(&users)
+      db.Where("user_name = ?", userJson.UserName).First(&users)
    
+        fmt.Println(reflect.TypeOf(userJson))
       if len(users) == 0 {
-        db.Create(&userj)
+        db.Create(&userJson)
       }else{
-        fmt.Printf("a user with %s username  Exist", userj.UserName)
+        fmt.Printf("a user with %s username  Exist", userJson.UserName)
       }
  }
 
 func addcontact(w http.ResponseWriter, r *http.Request){
-  var userj model.Users
+  var userJson model.Users
   var userg model.Users
+  json.NewDecoder(r.Body).Decode(&userJson)
   db, err := model.GetDB()
+  
   if err != nil{
     fmt.Println(err)
     return
   }
   
+  db.Where("user_name = ?", userJson.UserName).First(&userg)
+  fmt.Println("dats from frontend",userJson)
+  fmt.Println("dats from backend",userg)
+  db.Model(&model.Users{}).Where("user_name = ?", userJson.UserName).Update("contact",userg.Contact + userJson.Contact + ",")
   
-  js := json.NewDecoder(r.Body).Decode(&userj)
   
-  db.Where("user_name = ?", userj.UserName).First(&userg)
-  db.Find(&userj)
-  db.Model(&model.Users{}).Where("user_name = ?", userj.UserName).Update("contact",userg.Contact + "," + userj.Contact)
+}
+func getContact(w http.ResponseWriter, r *http.Request){
+  un := mux.Vars(r)
+  var userc model.Users
+  db,err := model.GetDB()
+  if err != nil{
+    fmt.Println(err)
+  }
+  db.Where("user_name = ?", un["user_name"]).First(&userc)
+  fmt.Println(un["user_name"])
+  response, err := json.Marshal(userc)
+  if err != nil {
+    w.WriteHeader(http.StatusInternalServerError)
+        w.Write([]byte(err.Error()))
+        return
+      }
+      w.Header().Set("Content-Type", "application/json")
+      w.Write([]byte(response))
 }
 
 func main() {
@@ -135,6 +160,12 @@ func main() {
       } else {
         db.Migrator().CreateTable(&model.Users{})
       }
+      msgTableExist := db.Migrator().HasTable("messages")
+      if msgTableExist{
+        fmt.Println("Message Table Exist")
+      } else {
+        db.Migrator().CreateTable(&model.Message{})
+      }
       r := mux.NewRouter()
       // Create a simple file server
       //fs := http.FileServer(http.Dir("./frontend"))
@@ -143,9 +174,10 @@ func main() {
       r.HandleFunc("/hello", hello)
       r.HandleFunc("/adduser", adduser)
       r.HandleFunc("/addcontact", addcontact)
+      r.HandleFunc("/getcontact/{user_name}", getContact)
       go handlemsg()
       http.Handle("/", r)
-      log.Fatal(http.ListenAndServe(*addr, handlers.CORS(handlers.AllowedHeaders([]string{"X-Requested-With", "Content-Type", "Authorization"}), handlers.AllowedMethods([]string{"GET", "POST", "PUT", "HEAD", "OPTIONS"}), handlers.AllowedOrigins([]string{"*"}))(r)))
+      log.Fatal(http.ListenAndServe(*addr, handlers.CORS(handlers.AllowedHeaders([]string{"X-Requested-With", "Content-Type", "XMLHttpRequest", "Authorization"}), handlers.AllowedMethods([]string{"GET", "POST", "PUT", "HEAD", "OPTIONS"}), handlers.AllowedOrigins([]string{"*"}))(r)))
 
       //log.Fatal(http.ListenAndServe(*addr, nil))
     }
