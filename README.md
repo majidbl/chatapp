@@ -5,4 +5,7 @@ Simple chat app with golang gorilla websocket as backend and vuejs as frontend
 - [x] add contact to contact list
 - [ ] improve ui/ux in frontend
 - [ ] add button to remove contact from contact list
-- [ ] save old messages in postgers and show in frontend
+- [x] save old messages in postgers and show in frontend
+- [ ] add group or something like channel
+- [ ] delete message from chat
+- [ ] show status of users
