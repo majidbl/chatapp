@@ -44,19 +44,43 @@
       </b-sidebar>
     </div>
    <div v-if="contacts_selected==true">
-      <b-card class="chat-content" title="Chat Page">
-        <b-card-text v-for="(m, index) in smsgs" :key="index" :align="m.direct">
-          <b-badge variant="primary">
+     <b-card :title="reciever" sub-title="status">
+      
+      <div    
+        v-for="(m, index) in smsgs" :key="index" :align="setAlign(m.sender)" 
+      >
+       <div class="mb-2 mt-2" v-if="m.sender == sender">
+          <b-badge class="mr-2">
             <img
               src="http://www.bitrebels.com/wp-content/uploads/2011/02/Original-Facebook-Geek-Profile-Avatar-1.jpg"
               class="img-responsive"
             />
           </b-badge>
-          <b-card align="left" :sub-title="m.sender" class="chat-msg">
-            <b-card-text>{{m.msg}}</b-card-text>
-          </b-card>
-        </b-card-text>
-      </b-card>
+             
+            <b-button variant="success" >
+              {{m.content}}
+            </b-button>
+         
+       </div>
+         
+           
+       <div class="mb-1 mt-1 chat" v-else>
+            <b-button variant="primary" >
+              {{m.content}}
+            </b-button>
+          <b-badge class="ml-2">
+            <img
+              src="http://www.bitrebels.com/wp-content/uploads/2011/02/Original-Facebook-Geek-Profile-Avatar-1.jpg"
+              class="img-responsive"
+            />
+          </b-badge>
+             
+         
+       </div>
+         
+             
+      </div>
+     </b-card>
       <b-form inline>
         <b-textarea
         rows="0"
@@ -117,7 +141,7 @@ export default {
         })
       );
       //console.log(this.reciever)
-      this.smsgs.push({ sender: this.sender, msg: this.msg, direct: "left" });
+      this.smsgs.push({ sender: this.sender, reciever:this.reciever, content: this.msg});
       this.msg = "";
       this.connection.onmessage = this.setMessage;
 
@@ -127,8 +151,8 @@ export default {
       var jmsg = JSON.parse(m.data);
       this.smsgs.push({
         sender: jmsg.sender,
-        msg: jmsg.content,
-        direct: "right",
+        reciever : jmsg.reciever,
+        content: jmsg.content
       });
     },
     setReciever(r) {
@@ -139,6 +163,11 @@ export default {
         
       }else{
         this.contacts_selected = true;
+        var url = 'http://localhost:8888/getmessage/'+ this.username + "_" + this.reciever
+        axios
+        .get(url)
+        .then(response => this.smsgs=response.data)
+        .catch(error => console.log(error))
         
       }
     },
@@ -188,6 +217,12 @@ export default {
     this.newcontact = ""
       }
       
+    },
+    setAlign(sen){
+      if(sen == this.username){
+        return "left"
+      }
+      return "right"
     }
     
   },
@@ -221,8 +256,24 @@ export default {
   max-width: 25px;
   max-height: 25px;
 }
-.chat-msg {
-  max-width: 275px;
-  max-height: 175;
+/*.chat {
+	position: relative;
+	background: #00aabb;
+	border-radius: .4em;
 }
+
+.chat:after {
+	content: '';
+	position: absolute;
+	bottom: 0;
+	left: 50%;
+	width: 0;
+	height: 0;
+	border: 20px solid transparent;
+	border-top-color: #00aabb;
+	border-bottom: 0;
+	border-left: 0;
+	margin-left: -10px;
+	margin-bottom: -20px;
+}*/
 </style>

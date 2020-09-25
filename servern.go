@@ -4,6 +4,7 @@ import (
   "flag"
   "fmt"
   "log"
+  "strings"
   "net/http"
   "encoding/json"
   "github.com/gorilla/mux"
@@ -17,7 +18,9 @@ import (
 var clients = make(map[string]*websocket.Conn)
 var msgs = make(chan model.Message)
 var addr = flag.String("addr", "localhost:8888", "http service address")
-    
+type MsgArr struct{
+  messagesArray []model.Message
+}   
 var upgrader = websocket.Upgrader{} // use default options
     
 func echo(w http.ResponseWriter, r *http.Request) {
@@ -88,7 +91,27 @@ func hello(w http.ResponseWriter, r *http.Request){
       w.Header().Set("Content-Type", "application/json")
       w.Write([]byte(response))
     }
- 
+ func getMsg(w http.ResponseWriter, r *http.Request){
+   sr := mux.Vars(r)
+   s_r := strings.Split(sr["sender_reciver"],"_")
+   db, errdb := model.GetDB()
+   if errdb != nil{
+     fmt.Println(errdb)
+     return
+   }
+   //fmt.Println(sr[0])
+   //fmt.Println(sr[1])
+   var msgarr []model.Message
+   db.Where("sender=?",s_r[0]).Where("reciver= ?",s_r[1]).Or(db.Where("sender=?",s_r[1]).Where("reciver= ?",s_r[0])).Find(&msgarr)
+   response, err := json.Marshal(msgarr)
+   if err != nil {
+     w.WriteHeader(http.StatusInternalServerError)
+        w.Write([]byte(err.Error()))
+        return
+      }
+      w.Header().Set("Content-Type", "application/json")
+      w.Write([]byte(response))
+ }
  func adduser(w http.ResponseWriter, r *http.Request){
    
       
@@ -175,6 +198,7 @@ func main() {
       r.HandleFunc("/adduser", adduser)
       r.HandleFunc("/addcontact", addcontact)
       r.HandleFunc("/getcontact/{user_name}", getContact)
+      r.HandleFunc("/getmessage/{sender_reciver}", getMsg)
       go handlemsg()
       http.Handle("/", r)
       log.Fatal(http.ListenAndServe(*addr, handlers.CORS(handlers.AllowedHeaders([]string{"X-Requested-With", "Content-Type", "XMLHttpRequest", "Authorization"}), handlers.AllowedMethods([]string{"GET", "POST", "PUT", "HEAD", "OPTIONS"}), handlers.AllowedOrigins([]string{"*"}))(r)))
