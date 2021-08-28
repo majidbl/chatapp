@@ -7,11 +7,13 @@ import (
   "strings"
   "net/http"
   "encoding/json"
+  "reflect"
+
   "github.com/gorilla/mux"
   "github.com/gorilla/handlers"
-  "reflect"
-  "github.com/majidzarephysics/chatapp/model"
   "github.com/gorilla/websocket"
+  
+  "github.com/majidzarephysics/chatapp/model"
   )
   
   
